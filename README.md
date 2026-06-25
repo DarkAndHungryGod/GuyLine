@@ -14,7 +14,7 @@ are silent and expensive. Price something per linear metre when the quantity is
 an area, and a spreadsheet will happily give you a confident, wrong number.
 GuyLine won't: the dimensional checker is a correctness *engine*, and the same
 public API that the UI draws is the one an AI agent can drive; propose a graph,
-read back the exact dimensional fault, repair it.
+read back the exact dimensional fault, repair it.  A tool that humans and AI can use to prove units are coherent and in sync. 
 
 Conceptual cousins: Grasshopper, Dynamo, Mathcad.
 
@@ -27,8 +27,7 @@ It's also a homophone for **guideline**: the rule that keeps you correct.
 
 That double meaning is the whole product in one word. GuyLine is the cable that
 keeps your numbers *true* — every wire under tension, every dimension held in
-line. The name is meant to be the mnemonic: when you see it, you should remember
-what it does.
+line.
 
 ## Architecture
 
