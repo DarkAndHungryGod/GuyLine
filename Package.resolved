@@ -1,0 +1,24 @@
+{
+  "originHash" : "ef39c93526913d6d5d41f5df03d56050103a5e0c87e85fdb679ddb138151e991",
+  "pins" : [
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "units",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DarkAndHungryGod/Units.git",
+      "state" : {
+        "branch" : "feat/extensible-quantity",
+        "revision" : "a813585d4f36bc98e3cd9e77919f7f6be0da84c4"
+      }
+    }
+  ],
+  "version" : 3
+}

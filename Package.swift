@@ -1,0 +1,47 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "GuyLine",
+    platforms: [
+        .macOS(.v13)
+    ],
+    products: [
+        .library(name: "QuantityKernel", targets: ["QuantityKernel"]),
+        .library(name: "GraphEngine", targets: ["GraphEngine"]),
+        .executable(name: "GuyLineApp", targets: ["GuyLineApp"])
+    ],
+    dependencies: [
+        // Pointed at our fork's branch for the extensible-Quantity work (the `Money`
+        // dimension). Switch back to a tagged upstream release once the PR merges:
+        //   .package(url: "https://github.com/NeedleInAJayStack/Units.git", from: "1.2.0")
+        .package(
+            url: "https://github.com/DarkAndHungryGod/Units.git",
+            branch: "feat/extensible-quantity"
+        )
+    ],
+    targets: [
+        .target(
+            name: "QuantityKernel",
+            dependencies: [
+                .product(name: "Units", package: "Units")
+            ]
+        ),
+        .testTarget(
+            name: "QuantityKernelTests",
+            dependencies: ["QuantityKernel"]
+        ),
+        .target(
+            name: "GraphEngine",
+            dependencies: ["QuantityKernel"]
+        ),
+        .testTarget(
+            name: "GraphEngineTests",
+            dependencies: ["GraphEngine", "QuantityKernel"]
+        ),
+        .executableTarget(
+            name: "GuyLineApp",
+            dependencies: ["GraphEngine", "QuantityKernel"]
+        )
+    ]
+)
