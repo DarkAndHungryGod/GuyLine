@@ -13,6 +13,14 @@ struct GuyLineApp: App {
                 .frame(minWidth: 960, minHeight: 620)
         }
         .windowStyle(.titleBar)
+        .commands {
+            CommandMenu("Examples") {
+                ForEach(BundledExamples.all) { example in
+                    Button(example.title) { vm.load(example.document) }
+                        .help(example.summary)
+                }
+            }
+        }
     }
 }
 

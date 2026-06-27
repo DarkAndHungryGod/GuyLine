@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    { "id": "rho",        "kind": "input", "name": "Fluid density",      "value": 1000,    "unit": "kg/m^3" },
+    { "id": "gravity",    "kind": "input", "name": "Gravity",            "value": 9.81,    "unit": "m/s^2" },
+    { "id": "flow",       "kind": "input", "name": "Volumetric flow",    "value": 0.05,    "unit": "m^3/s" },
+    { "id": "head",       "kind": "input", "name": "Pump head",          "value": 30,      "unit": "m" },
+    { "id": "efficiency", "kind": "input", "name": "Pump efficiency",    "value": 0.7,     "unit": "" },
+    { "id": "hours",      "kind": "input", "name": "Run time",           "value": 8,       "unit": "hr" },
+    { "id": "tariff",     "kind": "input", "name": "Energy tariff",      "value": 0.00028, "unit": "$/W/hr" },
+
+    { "id": "rho_g",       "kind": "multiply", "name": "ρ·g" },
+    { "id": "rho_g_q",     "kind": "multiply", "name": "ρ·g·Q" },
+    { "id": "hydraulic",   "kind": "multiply", "name": "Hydraulic power (ρ·g·Q·H)" },
+    { "id": "shaft_power", "kind": "divide",   "name": "Shaft power (÷ efficiency)" },
+    { "id": "energy",      "kind": "multiply", "name": "Energy used" },
+    { "id": "cost",        "kind": "multiply", "name": "Running cost" }
+  ],
+  "edges": [
+    { "from": "rho",     "to": { "node": "rho_g", "port": "a" } },
+    { "from": "gravity", "to": { "node": "rho_g", "port": "b" } },
+
+    { "from": "rho_g", "to": { "node": "rho_g_q", "port": "a" } },
+    { "from": "flow",  "to": { "node": "rho_g_q", "port": "b" } },
+
+    { "from": "rho_g_q", "to": { "node": "hydraulic", "port": "a" } },
+    { "from": "head",    "to": { "node": "hydraulic", "port": "b" } },
+
+    { "from": "hydraulic",  "to": { "node": "shaft_power", "port": "a" } },
+    { "from": "efficiency", "to": { "node": "shaft_power", "port": "b" } },
+
+    { "from": "shaft_power", "to": { "node": "energy", "port": "a" } },
+    { "from": "hours",       "to": { "node": "energy", "port": "b" } },
+
+    { "from": "energy", "to": { "node": "cost", "port": "a" } },
+    { "from": "tariff", "to": { "node": "cost", "port": "b" } }
+  ]
+}

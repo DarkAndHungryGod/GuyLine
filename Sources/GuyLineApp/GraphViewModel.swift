@@ -92,6 +92,66 @@ final class GraphViewModel: ObservableObject {
         result = graph.evaluate()
     }
 
+    // MARK: - Loading documents
+
+    /// Replace the current graph with a loaded ``GraphDocument`` (e.g. a bundled
+    /// example), laying it out automatically since the document carries no
+    /// positions. Silently keeps the existing graph if the document can't load —
+    /// the bundled examples are test-verified, so a failure here is not expected.
+    func load(_ document: GraphDocument) {
+        guard let (loaded, _) = try? Graph.load(document, catalog: catalog) else { return }
+        graph = loaded
+        positions = Self.autoLayout(loaded)
+        selection = nil
+        recompute()
+    }
+
+    /// A simple layered layout: a node's column is the longest dependency path
+    /// reaching it (sources at column 0), and nodes are stacked top-to-bottom
+    /// within each column in a stable order. Good enough to make a loaded graph
+    /// legible without overlapping; the user can rearrange from there.
+    private static func autoLayout(_ graph: Graph) -> [NodeID: CGPoint] {
+        let columnWidth: CGFloat = 260
+        let rowHeight: CGFloat = 150
+        let origin = CGPoint(x: 60, y: 40)
+
+        // Incoming sources per node, for longest-path depth.
+        var sources: [NodeID: [NodeID]] = [:]
+        for edge in graph.edges {
+            sources[edge.target.node, default: []].append(edge.source.node)
+        }
+
+        var depthCache: [NodeID: Int] = [:]
+        func depth(_ id: NodeID, _ visiting: Set<NodeID>) -> Int {
+            if let cached = depthCache[id] { return cached }
+            // A node caught in a cycle resolves to column 0 rather than looping.
+            guard !visiting.contains(id) else { return 0 }
+            let incoming = sources[id] ?? []
+            let value = incoming.isEmpty
+                ? 0
+                : (incoming.map { depth($0, visiting.union([id])) }.max() ?? 0) + 1
+            depthCache[id] = value
+            return value
+        }
+
+        // Group nodes by column, ordered stably so layout is deterministic.
+        var columns: [Int: [NodeID]] = [:]
+        for id in graph.nodes.keys.sorted(by: { $0.description < $1.description }) {
+            columns[depth(id, [])] = (columns[depth(id, [])] ?? []) + [id]
+        }
+
+        var positions: [NodeID: CGPoint] = [:]
+        for (column, ids) in columns {
+            for (row, id) in ids.enumerated() {
+                positions[id] = CGPoint(
+                    x: origin.x + CGFloat(column) * columnWidth,
+                    y: origin.y + CGFloat(row) * rowHeight
+                )
+            }
+        }
+        return positions
+    }
+
     // MARK: - Display helpers
 
     /// The current value flowing out of a node's first output port, if it

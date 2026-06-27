@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    { "id": "length",   "kind": "input", "name": "Slab length",        "value": 12,   "unit": "m" },
+    { "id": "width",    "kind": "input", "name": "Slab width",         "value": 8,    "unit": "m" },
+    { "id": "depth",    "kind": "input", "name": "Slab depth",         "value": 0.15, "unit": "m" },
+    { "id": "density",  "kind": "input", "name": "Cement per volume",  "value": 350,  "unit": "kg/m^3" },
+    { "id": "bag_mass", "kind": "input", "name": "Mass per bag",       "value": 25,   "unit": "kg" },
+    { "id": "price",    "kind": "input", "name": "Price per bag",      "value": 8.5,  "unit": "$" },
+
+    { "id": "area",   "kind": "multiply", "name": "Plan area (L×W)" },
+    { "id": "volume", "kind": "multiply", "name": "Concrete volume" },
+    { "id": "cement", "kind": "multiply", "name": "Cement mass" },
+    { "id": "bags",   "kind": "divide",   "name": "Number of bags" },
+    { "id": "cost",   "kind": "multiply", "name": "Cement cost" }
+  ],
+  "edges": [
+    { "from": "length", "to": { "node": "area", "port": "a" } },
+    { "from": "width",  "to": { "node": "area", "port": "b" } },
+
+    { "from": "area",  "to": { "node": "volume", "port": "a" } },
+    { "from": "depth", "to": { "node": "volume", "port": "b" } },
+
+    { "from": "volume",  "to": { "node": "cement", "port": "a" } },
+    { "from": "density", "to": { "node": "cement", "port": "b" } },
+
+    { "from": "cement",   "to": { "node": "bags", "port": "a" } },
+    { "from": "bag_mass", "to": { "node": "bags", "port": "b" } },
+
+    { "from": "bags",  "to": { "node": "cost", "port": "a" } },
+    { "from": "price", "to": { "node": "cost", "port": "b" } }
+  ]
+}

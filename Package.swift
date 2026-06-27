@@ -33,7 +33,8 @@ let package = Package(
         ),
         .target(
             name: "GraphEngine",
-            dependencies: ["QuantityKernel"]
+            dependencies: ["QuantityKernel"],
+            resources: [.copy("Examples")]
         ),
         .testTarget(
             name: "GraphEngineTests",
