@@ -58,9 +58,16 @@ struct CanvasPresentation: Codable, Equatable, Sendable {
 enum ExampleLayouts {
     /// The default layout for the example with `id`, or `nil` if none is bundled.
     static func presentation(for id: String) -> CanvasPresentation? {
-        guard let url = Bundle.module.url(
-            forResource: id, withExtension: "json", subdirectory: "ExampleLayouts"
-        ) else { return nil }
+        // Resources land in different bundles depending on how the app is built:
+        // SwiftPM (`swift run`) copies them into the target's `Bundle.module` under
+        // an `ExampleLayouts/` subdirectory; an Xcode app target copies them flat
+        // into the app's `Bundle.main`.
+        #if SWIFT_PACKAGE
+        let url = Bundle.module.url(forResource: id, withExtension: "json", subdirectory: "ExampleLayouts")
+        #else
+        let url = Bundle.main.url(forResource: id, withExtension: "json")
+        #endif
+        guard let url else { return nil }
         return try? JSONDecoder().decode(CanvasPresentation.self, from: Data(contentsOf: url))
     }
 }

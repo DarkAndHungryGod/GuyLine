@@ -1,0 +1,42 @@
+# XcodeGen spec for the GuyLine macOS app.
+#
+# The SwiftPM package (Package.swift) stays the source of truth for the engine
+# libraries (QuantityKernel, GraphEngine); this only adds a proper macOS *app*
+# target that wraps the SwiftUI front-end in a real .app bundle with the
+# `.guyline` document type — something an SPM executable product can't produce.
+#
+# Regenerate the project with:  xcodegen generate
+# The generated GuyLine.xcodeproj is disposable (git-ignored); edit this file.
+name: GuyLine
+options:
+  bundleIdPrefix: com.guyline
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  GuyLine:
+    path: .
+targets:
+  GuyLine:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/GuyLineApp
+    dependencies:
+      - package: GuyLine
+        product: GraphEngine
+      - package: GuyLine
+        product: QuantityKernel
+    settings:
+      base:
+        PRODUCT_NAME: GuyLine
+        PRODUCT_BUNDLE_IDENTIFIER: com.guyline.app
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Info.plist
+        SWIFT_VERSION: "5.0"
+        # Local, ad-hoc signed app — fine for running on this machine.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
