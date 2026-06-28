@@ -31,7 +31,12 @@ private struct ExampleCommands: Commands {
                         // the document window; assert it so the main-actor init is
                         // reachable from this nonisolated closure.
                         newDocument {
-                            MainActor.assumeIsolated { GuyLineDocument(document: example.document) }
+                            MainActor.assumeIsolated {
+                                GuyLineDocument(
+                                    document: example.document,
+                                    presentation: ExampleLayouts.presentation(for: example.id)
+                                )
+                            }
                         }
                     }
                     .help(example.summary)

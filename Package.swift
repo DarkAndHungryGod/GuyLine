@@ -44,6 +44,9 @@ let package = Package(
         .executableTarget(
             name: "GuyLineApp",
             dependencies: ["GraphEngine", "QuantityKernel"],
+            // Default canvas layouts for bundled examples — presentation lives in the
+            // app, not the engine, so these sit alongside the UI that consumes them.
+            resources: [.copy("ExampleLayouts")],
             // SwiftUI's document APIs (`ReferenceFileDocument`, `newDocument`) aren't
             // yet fully Sendable-annotated for Swift 6 strict concurrency; the app
             // target builds in Swift 5 mode while the engine stays in Swift 6.

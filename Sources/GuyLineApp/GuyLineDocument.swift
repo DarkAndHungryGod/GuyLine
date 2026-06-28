@@ -47,6 +47,24 @@ struct CanvasPresentation: Codable, Equatable, Sendable {
     }
 }
 
+/// Hand-tuned default canvas layouts for bundled examples, decoded from the app's
+/// `ExampleLayouts/<id>.json` resources.
+///
+/// The engine's example catalogue carries only semantics (it has no concept of a
+/// position); these supply the presentation an example opens with. An example
+/// without a bundled layout simply falls back to auto-layout. Positions are keyed
+/// by the example document's stable node ids, so a layout keeps applying as long
+/// as those ids are stable.
+enum ExampleLayouts {
+    /// The default layout for the example with `id`, or `nil` if none is bundled.
+    static func presentation(for id: String) -> CanvasPresentation? {
+        guard let url = Bundle.module.url(
+            forResource: id, withExtension: "json", subdirectory: "ExampleLayouts"
+        ) else { return nil }
+        return try? JSONDecoder().decode(CanvasPresentation.self, from: Data(contentsOf: url))
+    }
+}
+
 /// A GuyLine graph as a document. A `ReferenceFileDocument` because the editable
 /// state lives in a reference-type ``GraphViewModel`` (an `ObservableObject` the
 /// canvas observes); the value-type `snapshot` decouples the main-actor model from
@@ -64,10 +82,12 @@ final class GuyLineDocument: @preconcurrency ReferenceFileDocument {
         self.viewModel = GraphViewModel()
     }
 
-    /// An untitled document seeded from a graph (used by "New from Example"): the
-    /// graph's semantics with no saved layout, so the canvas auto-lays it out.
-    init(document: GraphDocument) {
-        self.viewModel = (try? GraphViewModel(file: GraphFile(document: document)))
+    /// An untitled document seeded from a graph (used by "New from Example").
+    ///
+    /// `presentation` is the example's default layout when one is bundled; passing
+    /// `nil` leaves the canvas to auto-lay the graph out.
+    init(document: GraphDocument, presentation: CanvasPresentation? = nil) {
+        self.viewModel = (try? GraphViewModel(file: GraphFile(document: document, presentation: presentation)))
             ?? GraphViewModel()
     }
 
