@@ -1,6 +1,38 @@
 # Document-Based App
 
-Status: **design / on paper** — this is the next major piece of app work.
+Status: **implemented.** GuyLine is a `DocumentGroup` app: each graph is a real
+`.guyline` document with Open / Save / Save As / Open Recent / autosave, and
+"New from Example" opens a bundled example as its own untitled document. What was
+actually built, against the design below:
+
+- **Format — the "superset file" (option 1).** [`GraphFile`](../../Sources/GraphEngine/GraphFile.swift)
+  is the on-disk envelope: `{ formatVersion, document: <GraphDocument>,
+  presentation: <opaque> }`. The engine owns the envelope but treats presentation
+  as an opaque generic (`GraphFile<Presentation>`), so it never sees a `CGPoint`.
+  `GraphFileDocument` is the correctness-only read the engine / AI layer use — it
+  decodes just the `document` key and ignores whatever presentation a front-end
+  stored. `formatVersion` is separate from `GraphDocument.schemaVersion` so the
+  two halves version independently.
+- **Presentation lives in the app.** [`CanvasPresentation`](../../Sources/GuyLineApp/GuyLineDocument.swift)
+  holds node positions and the selection, **keyed by the document's stable string
+  ids** (not in-memory `NodeID`s) so layout survives a round-trip and stays
+  meaningful to any tool that opens the file. `GraphViewModel` keeps the `IdMap`
+  from load and refreshes it on every save (via the new
+  `Graph.documentAndIDs(using:)`) so position keys track minted ids for nodes
+  added after load. Nodes with no saved position fall back to auto-layout.
+- **`ReferenceFileDocument`** (option 1 of §1) wrapping the reference-type
+  `GraphViewModel`; `snapshot` is the value-type seam that undo/autosave hook into.
+- **Deviations from the plan:** the deployment target moved to **macOS 14** (for
+  SwiftUI's `newDocument` action). **Undo/redo is not wired yet** — `snapshot`
+  exists, but registering edits on the document's `UndoManager` is a follow-up.
+  Full Finder association (double-click, the `.guyline` badge) needs an app
+  bundle's Info.plist (`UTExportedTypeDeclarations` / `CFBundleDocumentTypes`),
+  which the `swift run` executable has no place for; in-app Open/Save work without
+  it.
+
+---
+
+The original design notes follow.
 
 ## Current state
 

@@ -5,19 +5,36 @@ import GraphEngine
 @main
 struct GuyLineApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var vm = GraphViewModel.demo()
 
     var body: some Scene {
-        WindowGroup("GuyLine") {
-            ContentView(vm: vm)
+        DocumentGroup(newDocument: { MainActor.assumeIsolated { GuyLineDocument() } }) { configuration in
+            ContentView(vm: configuration.document.viewModel)
                 .frame(minWidth: 960, minHeight: 620)
         }
-        .windowStyle(.titleBar)
         .commands {
-            CommandMenu("Examples") {
+            ExampleCommands()
+        }
+    }
+}
+
+/// Adds "New from Example" under the File menu's New group: each bundled example
+/// opens as its own untitled document rather than overwriting the current graph.
+private struct ExampleCommands: Commands {
+    @Environment(\.newDocument) private var newDocument
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Menu("New from Example") {
                 ForEach(BundledExamples.all) { example in
-                    Button(example.title) { vm.load(example.document) }
-                        .help(example.summary)
+                    Button(example.title) {
+                        // The factory runs on the main actor when SwiftUI creates
+                        // the document window; assert it so the main-actor init is
+                        // reachable from this nonisolated closure.
+                        newDocument {
+                            MainActor.assumeIsolated { GuyLineDocument(document: example.document) }
+                        }
+                    }
+                    .help(example.summary)
                 }
             }
         }
@@ -26,14 +43,17 @@ struct GuyLineApp: App {
 
 /// Forces a normal foreground app when launched via `swift run` (which otherwise
 /// starts as a background accessory, leaving the window behind other apps).
+///
+/// Deliberately does **not** implement `applicationShouldTerminateAfterLastWindowClosed`:
+/// for a document app the standard behaviour (and the only one that works with
+/// `DocumentGroup`'s launch open-panel) is to stay alive when no window is open.
+/// Returning `true` there quit the app the instant the open panel closed to make a
+/// new document — before SwiftUI could create the document window — which looked
+/// exactly like an instant crash on "New Document".
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
     }
 }
 

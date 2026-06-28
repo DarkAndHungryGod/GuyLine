@@ -113,7 +113,7 @@ public struct IdMap: Sendable {
     private(set) var byString: [String: NodeID]
     private(set) var byNode: [NodeID: String]
 
-    init() {
+    public init() {
         byString = [:]
         byNode = [:]
     }
@@ -255,6 +255,15 @@ extension Graph {
     /// its name. Output is deterministic: nodes are sorted by id and edges by
     /// their endpoints, so the same graph always serializes identically.
     public func document(using ids: IdMap? = nil) -> GraphDocument {
+        documentAndIDs(using: ids).document
+    }
+
+    /// As ``document(using:)``, but also returns the complete ``IdMap`` that was
+    /// used — including ids freshly minted for nodes that weren't in the incoming
+    /// map. A caller that keeps presentation state keyed by document id (the UI's
+    /// node positions, say) needs this to translate its in-memory `NodeID`s to the
+    /// same string ids the saved document uses.
+    public func documentAndIDs(using ids: IdMap? = nil) -> (document: GraphDocument, ids: IdMap) {
         var assigned: [NodeID: String] = [:]
         var used: Set<String> = []
 
@@ -308,7 +317,10 @@ extension Graph {
                 ($0.from.node, $0.to.node, $0.to.port ?? "") < ($1.from.node, $1.to.node, $1.to.port ?? "")
             }
 
-        return GraphDocument(nodes: nodeDocs, edges: edgeDocs)
+        var outIDs = IdMap()
+        for (node, string) in assigned { outIDs.insert(string, node) }
+
+        return (GraphDocument(nodes: nodeDocs, edges: edgeDocs), outIDs)
     }
 
     private func kindTag(_ kind: NodeKind) -> String {

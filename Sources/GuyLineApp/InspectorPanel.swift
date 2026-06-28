@@ -51,7 +51,7 @@ private struct NodeInspector: View {
                 Text("Name").foregroundStyle(.secondary)
                 TextField("Name", text: $nameText)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: nameText) { newValue in vm.rename(node.id, to: newValue) }
+                    .onChange(of: nameText) { vm.rename(node.id, to: nameText) }
             }
             row("Kind", kindName)
 

@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
     name: "GuyLine",
     platforms: [
-        .macOS(.v13)
+        // macOS 14 for SwiftUI's `newDocument` action ("New from Example").
+        .macOS(.v14)
     ],
     products: [
         .library(name: "QuantityKernel", targets: ["QuantityKernel"]),
@@ -42,7 +43,11 @@ let package = Package(
         ),
         .executableTarget(
             name: "GuyLineApp",
-            dependencies: ["GraphEngine", "QuantityKernel"]
+            dependencies: ["GraphEngine", "QuantityKernel"],
+            // SwiftUI's document APIs (`ReferenceFileDocument`, `newDocument`) aren't
+            // yet fully Sendable-annotated for Swift 6 strict concurrency; the app
+            // target builds in Swift 5 mode while the engine stays in Swift 6.
+            swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
 )

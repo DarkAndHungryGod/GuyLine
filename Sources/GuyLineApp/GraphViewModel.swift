@@ -17,6 +17,60 @@ final class GraphViewModel: ObservableObject {
 
     private let catalog = UnitCatalog.standard
 
+    /// Maps the document's stable string ids to the in-memory `NodeID`s, so a save
+    /// reuses the same ids a load produced — and so presentation state (positions,
+    /// selection) can be translated to and from the on-disk id space. Replaced on
+    /// load and refreshed on every save (which may mint ids for newly added nodes).
+    private var ids = IdMap()
+
+    // MARK: - Lifecycle
+
+    /// A new, empty document.
+    init() {}
+
+    /// Build from an opened ``GraphFile``: load the semantics, then restore saved
+    /// node positions and selection. Auto-layout fills in any node the file didn't
+    /// position (including the whole graph when there's no presentation at all),
+    /// so the canvas is always legible.
+    init(file: GraphFile<CanvasPresentation>) throws {
+        let (loaded, ids) = try Graph.load(file.document, catalog: catalog)
+        graph = loaded
+        self.ids = ids
+
+        var positions = Self.autoLayout(loaded)
+        if let presentation = file.presentation {
+            for (stringID, point) in presentation.positions {
+                if let nodeID = ids.nodeID(for: stringID) { positions[nodeID] = point.cgPoint }
+            }
+        }
+        self.positions = positions
+        selection = file.presentation?.selection.flatMap { ids.nodeID(for: $0) }
+        recompute()
+    }
+
+    /// Capture the current graph and canvas layout as a serializable file.
+    ///
+    /// Round-tripping through ``Graph/documentAndIDs(using:)`` reuses existing ids
+    /// and mints stable ones for any node added since the last save; the refreshed
+    /// map is kept so later saves stay stable. Presentation is keyed by those
+    /// string ids, dropping any position whose node no longer exists.
+    func fileSnapshot() -> GraphFile<CanvasPresentation> {
+        let (document, ids) = graph.documentAndIDs(using: self.ids)
+        self.ids = ids
+
+        var savedPositions: [String: CanvasPoint] = [:]
+        for (nodeID, point) in positions {
+            if let stringID = ids.string(for: nodeID) {
+                savedPositions[stringID] = CanvasPoint(point)
+            }
+        }
+        let presentation = CanvasPresentation(
+            positions: savedPositions,
+            selection: selection.flatMap { ids.string(for: $0) }
+        )
+        return GraphFile(document: document, presentation: presentation)
+    }
+
     /// Nodes in a stable order so the canvas doesn't reshuffle on recompute.
     var nodeList: [Node] {
         graph.nodes.values.sorted { $0.id.description < $1.id.description }
@@ -92,19 +146,7 @@ final class GraphViewModel: ObservableObject {
         result = graph.evaluate()
     }
 
-    // MARK: - Loading documents
-
-    /// Replace the current graph with a loaded ``GraphDocument`` (e.g. a bundled
-    /// example), laying it out automatically since the document carries no
-    /// positions. Silently keeps the existing graph if the document can't load —
-    /// the bundled examples are test-verified, so a failure here is not expected.
-    func load(_ document: GraphDocument) {
-        guard let (loaded, _) = try? Graph.load(document, catalog: catalog) else { return }
-        graph = loaded
-        positions = Self.autoLayout(loaded)
-        selection = nil
-        recompute()
-    }
+    // MARK: - Layout
 
     /// A simple layered layout: a node's column is the longest dependency path
     /// reaching it (sources at column 0), and nodes are stacked top-to-bottom
@@ -199,40 +241,5 @@ final class GraphViewModel: ObservableObject {
             return String(Int(value))
         }
         return String(format: "%g", value)
-    }
-
-    // MARK: - Demo seed
-
-    /// A small starting graph — the concrete-pour estimating example — so the
-    /// canvas isn't empty on first launch:
-    ///   24 m³ per pile × $200/m³ = $4800/pile, × 5 piles = $24000.
-    /// The "5 piles" node is a dimensionless number that scales the dollars.
-    static func demo() -> GraphViewModel {
-        let vm = GraphViewModel()
-        let catalog = UnitCatalog.standard
-        let cubicMeter = try! catalog.unit("m").power(3)
-        let dollar = try! catalog.unit("$")
-
-        let rate = vm.graph.addNode(.input(Quantity(value: 200, unit: dollar / cubicMeter)), name: "rate")
-        let pour = vm.graph.addNode(.input(Quantity(value: 24, unit: cubicMeter)), name: "pour / pile")
-        let perPile = vm.graph.addNode(.multiply, name: "cost / pile")
-        let piles = vm.graph.addNode(.input(Quantity(scalar: 5)), name: "piles")
-        let total = vm.graph.addNode(.multiply, name: "total")
-
-        try? vm.graph.connect(OutputEndpoint(rate), to: InputEndpoint(perPile, 0))
-        try? vm.graph.connect(OutputEndpoint(pour), to: InputEndpoint(perPile, 1))
-        try? vm.graph.connect(OutputEndpoint(perPile), to: InputEndpoint(total, 0))
-        try? vm.graph.connect(OutputEndpoint(piles), to: InputEndpoint(total, 1))
-
-        // Top-left corners in canvas space.
-        vm.positions = [
-            rate: CGPoint(x: 60, y: 60),
-            pour: CGPoint(x: 60, y: 220),
-            perPile: CGPoint(x: 340, y: 120),
-            piles: CGPoint(x: 340, y: 300),
-            total: CGPoint(x: 620, y: 200),
-        ]
-        vm.recompute()
-        return vm
     }
 }
