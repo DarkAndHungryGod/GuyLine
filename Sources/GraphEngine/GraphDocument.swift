@@ -17,7 +17,13 @@ public struct GraphDocument: Codable, Equatable, Sendable {
     public var edges: [EdgeDocument]
 
     /// The schema version this build reads and writes.
-    public static let currentSchemaVersion = 1
+    ///
+    /// - v1: input/operation nodes with `value`/`unit`.
+    /// - v2: nodes gained the optional `quantized` flag (discrete whole-unit
+    ///   output). The addition is backward-compatible — every v1 document still
+    ///   loads — but writing the flag bumps the version so older builds, which
+    ///   would silently drop it and miscompute, refuse the file instead.
+    public static let currentSchemaVersion = 2
 
     public init(
         schemaVersion: Int = GraphDocument.currentSchemaVersion,
@@ -39,18 +45,25 @@ public struct NodeDocument: Codable, Equatable, Sendable {
     public var value: Double?
     public var unit: String?
 
+    /// Marks a discrete node whose output is rounded up to whole units (see
+    /// ``Node/quantized``). Omitted entirely when `false`, so an ordinary
+    /// continuous node serializes exactly as it did before this flag existed.
+    public var quantized: Bool?
+
     public init(
         id: String,
         kind: String,
         name: String? = nil,
         value: Double? = nil,
-        unit: String? = nil
+        unit: String? = nil,
+        quantized: Bool? = nil
     ) {
         self.id = id
         self.kind = kind
         self.name = name
         self.value = value
         self.unit = unit
+        self.quantized = quantized
     }
 }
 
@@ -166,7 +179,7 @@ extension Graph {
         _ document: GraphDocument,
         catalog: UnitCatalog
     ) throws -> (graph: Graph, ids: IdMap) {
-        guard document.schemaVersion == GraphDocument.currentSchemaVersion else {
+        guard (1...GraphDocument.currentSchemaVersion).contains(document.schemaVersion) else {
             throw DocumentError.unsupportedSchemaVersion(document.schemaVersion)
         }
 
@@ -179,6 +192,7 @@ extension Graph {
             }
             let kind = try nodeKind(from: node, catalog: catalog)
             let nodeID = graph.addNode(kind, name: node.name ?? node.id)
+            if node.quantized == true { graph.setQuantized(nodeID, true) }
             ids.insert(node.id, nodeID)
         }
 
@@ -288,14 +302,21 @@ extension Graph {
         let nodeDocs = nodes.values
             .map { node -> NodeDocument in
                 let stringID = assigned[node.id]!
+                // Emit the flag only when set, so unquantized nodes serialize
+                // exactly as before (and don't gratuitously churn old files).
+                let quantized = node.quantized ? true : nil
                 switch node.kind {
                 case .input(let quantity):
                     return NodeDocument(
                         id: stringID, kind: "input", name: node.name,
-                        value: quantity.value, unit: quantity.unit.symbol
+                        value: quantity.value, unit: quantity.unit.symbol,
+                        quantized: quantized
                     )
                 case .add, .subtract, .multiply, .divide:
-                    return NodeDocument(id: stringID, kind: kindTag(node.kind), name: node.name)
+                    return NodeDocument(
+                        id: stringID, kind: kindTag(node.kind), name: node.name,
+                        quantized: quantized
+                    )
                 }
             }
             .sorted { $0.id < $1.id }

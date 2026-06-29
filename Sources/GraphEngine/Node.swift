@@ -90,10 +90,19 @@ public struct Node: Identifiable, Equatable, Sendable {
     public var kind: NodeKind
     public var name: String
 
-    init(id: NodeID, kind: NodeKind, name: String) {
+    /// Whether this node's output is a **discrete quantity** — one that only
+    /// exists in whole units (bags, sheets, stock lengths). When set, the
+    /// evaluator rounds the node's output value *up* to the next whole number
+    /// (`201.6 bags → 202 bags`) before it flows downstream, so dependent
+    /// calculations (cost, totals) use the quantity actually purchased. Defaults
+    /// to `false`, leaving the continuous value untouched.
+    public var quantized: Bool
+
+    init(id: NodeID, kind: NodeKind, name: String, quantized: Bool = false) {
         self.id = id
         self.kind = kind
         self.name = name
+        self.quantized = quantized
     }
 
     /// The node's input ports, in index order.

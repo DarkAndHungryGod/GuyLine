@@ -142,6 +142,18 @@ final class GraphViewModel: ObservableObject {
         }
     }
 
+    /// Whether a node's output is marked as a discrete whole-unit quantity.
+    func isQuantized(_ id: NodeID) -> Bool {
+        graph.nodes[id]?.quantized ?? false
+    }
+
+    /// Toggle a node's discrete (whole-unit) rounding and recompute, since the
+    /// flag changes the value that flows downstream.
+    func setQuantized(_ id: NodeID, _ quantized: Bool) {
+        graph.setQuantized(id, quantized)
+        recompute()
+    }
+
     private func recompute() {
         result = graph.evaluate()
     }

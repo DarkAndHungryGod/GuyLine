@@ -1,6 +1,30 @@
 # Discrete Quantities & Rounding
 
-Status: **design / on paper** (no implementation yet).
+Status: **shipped (first cut)** — a per-node `quantized` flag (round **up** to whole
+units) is implemented in the engine, serialization, and the inspector. The richer
+configurable *round node* below (floor/nearest, arbitrary increment, wired step) is
+still on paper; the flag is the 80% case (procurement always rounds up to whole 1s).
+
+## What shipped
+
+- **Engine:** `Node.quantized: Bool`. When set, `Graph.evaluate()` rounds every
+  output of that node up to the next whole number (`Quantity.roundedUpToWhole()`,
+  `value.rounded(.up)`), preserving the unit/dimension, *before* publishing the
+  value — so downstream cost uses the 202 bags actually bought, not 201.6.
+- **Serialization:** optional `quantized` on `NodeDocument`, emitted only when
+  `true`. `schemaVersion` bumped **1 → 2**; loader now accepts the range `1...2`
+  (every v1 doc still loads). The bundled `concrete-takeoff` example marks its
+  `bags` node quantized (202 bags → $1717).
+- **UI:** a "Quantized units" toggle in the inspector (`GraphViewModel.setQuantized`).
+
+Divergence from the original proposal: this is a **flag on an existing node**, not a
+separate unary `round` kind. It keeps the common case zero-friction (tick the node
+that produces the count) and avoids a kind/port change. The round node below remains
+the path for floor/nearest and non-unit increments.
+
+---
+
+## Original proposal (round node) — still open for floor/nearest/increments
 
 ## The problem
 

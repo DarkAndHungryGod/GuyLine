@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "nodes": [
     { "id": "length",   "kind": "input", "name": "Slab length",        "value": 12,   "unit": "m" },
     { "id": "width",    "kind": "input", "name": "Slab width",         "value": 8,    "unit": "m" },
@@ -11,7 +11,7 @@
     { "id": "area",   "kind": "multiply", "name": "Plan area (L×W)" },
     { "id": "volume", "kind": "multiply", "name": "Concrete volume" },
     { "id": "cement", "kind": "multiply", "name": "Cement mass" },
-    { "id": "bags",   "kind": "divide",   "name": "Number of bags" },
+    { "id": "bags",   "kind": "divide",   "name": "Number of bags", "quantized": true },
     { "id": "cost",   "kind": "multiply", "name": "Cement cost" }
   ],
   "edges": [

@@ -60,7 +60,13 @@ extension Graph {
             }
 
             do {
-                let outputs = try node.kind.evaluate(inputs: inputValues)
+                var outputs = try node.kind.evaluate(inputs: inputValues)
+                // A discrete node only exists in whole units: round its output up
+                // before publishing it, so everything downstream sees 202 bags,
+                // not 201.6.
+                if node.quantized {
+                    outputs = outputs.map { $0.roundedUpToWhole() }
+                }
                 for (port, value) in outputs.enumerated() {
                     values[OutputEndpoint(id, port)] = value
                 }

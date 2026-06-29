@@ -53,6 +53,46 @@ final class GraphEngineTests: XCTestCase {
         XCTAssertEqual(out.unit.dimensionDescription, "Money")
     }
 
+    // MARK: Discrete quantities — a quantized node rounds its output up
+
+    func testQuantizedNodeRoundsOutputUpToWholeUnits() throws {
+        var graph = Graph()
+        // 5040 kg of cement ÷ 25 kg/bag = 201.6 bags → 202 once quantized.
+        let cement = graph.addInput(try catalog.quantity(5040, "kg"), name: "cement")
+        let perBag = graph.addInput(try catalog.quantity(25, "kg"), name: "per bag")
+        let bags = graph.addNode(.divide, name: "bags")
+
+        try graph.connect(OutputEndpoint(cement), to: InputEndpoint(bags, 0))
+        try graph.connect(OutputEndpoint(perBag), to: InputEndpoint(bags, 1))
+
+        // Without quantization the fractional value flows through unchanged.
+        XCTAssertEqual(try XCTUnwrap(graph.evaluate().value(of: bags)).value, 201.6, accuracy: 1e-9)
+
+        graph.setQuantized(bags, true)
+        let rounded = try XCTUnwrap(graph.evaluate().value(of: bags))
+        XCTAssertEqual(rounded.value, 202, accuracy: 1e-9)
+        // Rounding preserves the unit/dimension; only the number changes.
+        XCTAssertTrue(rounded.isDimensionless)
+    }
+
+    func testQuantizedRoundingPropagatesDownstreamToCost() throws {
+        var graph = Graph()
+        let cement = graph.addInput(try catalog.quantity(5040, "kg"), name: "cement")
+        let perBag = graph.addInput(try catalog.quantity(25, "kg"), name: "per bag")
+        let price = graph.addInput(try catalog.quantity(8, "$"), name: "price")
+        let bags = graph.addNode(.divide, name: "bags")
+        let cost = graph.addNode(.multiply, name: "cost")
+
+        try graph.connect(OutputEndpoint(cement), to: InputEndpoint(bags, 0))
+        try graph.connect(OutputEndpoint(perBag), to: InputEndpoint(bags, 1))
+        try graph.connect(OutputEndpoint(bags), to: InputEndpoint(cost, 0))
+        try graph.connect(OutputEndpoint(price), to: InputEndpoint(cost, 1))
+
+        graph.setQuantized(bags, true)
+        // Cost uses the 202 bags actually bought, not 201.6: 202 × $8 = $1616.
+        XCTAssertEqual(try XCTUnwrap(graph.evaluate().value(of: cost)).value, 1616, accuracy: 1e-9)
+    }
+
     // MARK: The silent mistake — per-LINEAR-metre rate against an AREA
 
     func testPerLinearMetreRateAgainstAreaDoesNotReadAsCurrency() throws {

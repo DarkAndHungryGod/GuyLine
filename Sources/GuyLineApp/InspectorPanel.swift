@@ -43,6 +43,7 @@ private struct NodeInspector: View {
     @State private var nameText = ""
     @State private var valueText = ""
     @State private var symbolText = ""
+    @State private var quantized = false
     @State private var editError: String?
 
     var body: some View {
@@ -73,6 +74,17 @@ private struct NodeInspector: View {
                     Text(editError).font(.caption).foregroundStyle(.red)
                 }
             }
+
+            Divider()
+            Toggle(isOn: $quantized) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Quantized units")
+                    Text("Round the result up to whole units (e.g. 201.6 → 202 bags).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onChange(of: quantized) { vm.setQuantized(node.id, quantized) }
 
             Divider()
             Text("Result").font(.subheadline.weight(.semibold))
@@ -116,6 +128,7 @@ private struct NodeInspector: View {
 
     private func loadFields() {
         nameText = node.name
+        quantized = vm.isQuantized(node.id)
         if let fields = vm.inputFields(for: node.id) {
             valueText = fields.value
             symbolText = fields.symbol

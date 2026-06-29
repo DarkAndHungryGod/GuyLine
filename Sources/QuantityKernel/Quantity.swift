@@ -59,6 +59,17 @@ public struct Quantity: Equatable, Sendable {
         }
     }
 
+    /// This quantity with its value rounded **up** to the next whole number,
+    /// keeping the same unit (`201.6 bags → 202 bags`).
+    ///
+    /// This is the "discrete quantity" rule: things sold or installed only in
+    /// whole units (bags of cement, sheets of ply) can't take a fractional value,
+    /// and procurement always rounds *up* — 201.6 bags still needs 202 bought.
+    /// An already-whole value is returned unchanged.
+    public func roundedUpToWhole() -> Quantity {
+        Quantity(value: value.rounded(.up), unit: unit)
+    }
+
     // MARK: - Arithmetic
 
     /// Product of two quantities; dimensions combine.

@@ -84,6 +84,16 @@ public struct Graph: Equatable, Sendable {
         return true
     }
 
+    /// Mark a node's output as a discrete (whole-unit) quantity, or clear that
+    /// mark. See ``Node/quantized``; the value is rounded up during evaluation.
+    /// - Returns: `false` if no node with that id exists.
+    @discardableResult
+    public mutating func setQuantized(_ id: NodeID, _ quantized: Bool) -> Bool {
+        guard nodes[id] != nil else { return false }
+        nodes[id]?.quantized = quantized
+        return true
+    }
+
     /// Rename a node, keeping its identity, wiring, and behaviour.
     /// - Returns: `false` if no node with that id exists.
     @discardableResult

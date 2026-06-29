@@ -149,4 +149,44 @@ final class GraphDocumentTests: XCTestCase {
             XCTAssertEqual(error as? DocumentError, .unsupportedSchemaVersion(999))
         }
     }
+
+    // MARK: Quantized flag survives load → save and stays out of unmarked nodes
+
+    func testQuantizedFlagRoundTripsThroughDocument() throws {
+        let doc = GraphDocument(
+            nodes: [
+                NodeDocument(id: "cement", kind: "input", value: 5040, unit: "kg"),
+                NodeDocument(id: "per_bag", kind: "input", value: 25, unit: "kg"),
+                NodeDocument(id: "bags", kind: "divide", quantized: true)
+            ],
+            edges: [
+                EdgeDocument(from: EndpointRef(node: "cement"), to: EndpointRef(node: "bags", port: "a")),
+                EdgeDocument(from: EndpointRef(node: "per_bag"), to: EndpointRef(node: "bags", port: "b"))
+            ]
+        )
+        let (graph, ids) = try Graph.load(doc, catalog: catalog)
+        XCTAssertTrue(graph.nodes[try XCTUnwrap(ids.nodeID(for: "bags"))]!.quantized)
+
+        // Re-serialize: the flag is preserved on the marked node and omitted on
+        // the others (so unquantized nodes look exactly as they did pre-feature).
+        let saved = graph.document(using: ids)
+        let savedNodes = Dictionary(uniqueKeysWithValues: saved.nodes.map { ($0.id, $0) })
+        XCTAssertEqual(savedNodes["bags"]?.quantized, true)
+        XCTAssertNil(savedNodes["cement"]?.quantized)
+    }
+
+    func testV1DocumentWithoutQuantizedStillLoads() throws {
+        // A document written before the flag existed (schemaVersion 1, no
+        // `quantized` key) must still load, defaulting the flag to false.
+        let json = """
+        {
+          "schemaVersion": 1,
+          "nodes": [{ "id": "a", "kind": "input", "value": 1, "unit": "m" }],
+          "edges": []
+        }
+        """
+        let doc = try JSONDecoder().decode(GraphDocument.self, from: Data(json.utf8))
+        let (graph, ids) = try Graph.load(doc, catalog: catalog)
+        XCTAssertFalse(graph.nodes[try XCTUnwrap(ids.nodeID(for: "a"))]!.quantized)
+    }
 }
